@@ -25,6 +25,7 @@ from PyQt4.QtCore import *#QSettings, QTranslator, qVersion, QCoreApplication
 from PyQt4.QtGui import * #QAction, QIcon, QFileDialog, QDialog
 # Initialize Qt resources from file resources.py
 import resources
+import glob
 # Import the code for the dialog
 from smmt_plugin_dialog import smmt_pluginDialog
 import os.path
@@ -75,6 +76,12 @@ class smmt_plugin:
         btn = QPushButton("Quit", self.dlg)
         btn.clicked.connect(QCoreApplication.instance().quit)
         self.dlg.resize(2000,1000)
+        btn2 = QPushButton("Next", self.dlg)
+        btn2.resize(btn2.sizeHint())
+        btn2.move(100,500)
+        btn2.clicked.connect(self.passar_foto)
+
+        #btn.clicked.connect(self.proxima_foto)
 #================================================================
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -184,13 +191,27 @@ class smmt_plugin:
 
     def selecionar_fotos_direita(self):
         #filename_right = QFileDialog.getOpenFileNames(self.dlg, "Selecionar imagens câmera direita","/", '*.jpg, *.png')
-        #filename_right_dir= QFileDialog.getExistingDirectory(self.dlg,"Selecionar Pasta com imagens camera da direita","/")
-        filename_right = QFileDialog.getOpenFileName(self.dlg,"cuzao","/home/lucas/Imagens")
+        self.filename_right_dir= QFileDialog.getExistingDirectory(self.dlg,"Selecionar Pasta com imagens camera da direita","/")
+        #list of jpeg files inside the folder
+        #files = [name for name in os.listdir(str(filename_right_dir)) if name.endswith('.png')]
+        self.files = os.listdir(self.filename_right_dir)
+        #filename_right = QFileDialog.getOpenFileName(self.dlg,"cuzao","/home/lucas/Imagens")
         #self.dlg.lineEdit_d.setText(filename_right_dir)
-        img = QImage(filename_right)
+        #img = QImage(filename_right)
         self.dlg.label_im_d.resize(600,600)
-        pixmap = QPixmap(filename_right) .scaled(self.dlg.label_im_d.width(),self.dlg.label_im_d.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+        self.index=0
+        pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.label_im_d.width(),self.dlg.label_im_d.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
         self.dlg.label_im_d.setPixmap(pixmap)
+
+    def passar_foto(self):
+        self.index +=1
+        pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.label_im_d.width(),self.dlg.label_im_d.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+        self.dlg.label_im_d.setPixmap(pixmap)
+
+
+    #def proxima_foto (self):
+    #    pixmap
+
 
 #====================================================================================
 
