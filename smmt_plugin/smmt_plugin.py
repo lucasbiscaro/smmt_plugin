@@ -74,14 +74,40 @@ class smmt_plugin:
         self.dlg.pushButton_d.clicked.connect(self.selecionar_fotos_direita)
         self.dlg.pushButton_e.clicked.connect(self.selecionar_fotos_esquerda)
         btn = QPushButton("Quit", self.dlg)
-        btn.clicked.connect(QCoreApplication.instance().quit)
+        #btn.clicked.connect(QCoreApplication.instance().quit)
         self.dlg.resize(2000,1000)
         btn2 = QPushButton("Next", self.dlg)
         btn2.resize(btn2.sizeHint())
         btn2.move(100,500)
         btn2.clicked.connect(self.passar_foto)
+        self.dlg.cena = QGraphicsScene(self.dlg)
+        self.dlg._photo = QGraphicsPixmapItem()
+        self.dlg.cena.addItem(self.dlg._photo)
+        self.dlg.visu = QGraphicsView(self.dlg)
+        self.dlg.visu.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.dlg.visu.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        self.dlg.visu.setFrameShape(QFrame.NoFrame)
+        self.dlg.visu.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.dlg.visu.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.dlg.visu.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
+        #self.dlg.visu.setGeometry(300,300,400,400)
+        self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.dlg.visu._zoom = 0
+        self.dlg.visu._empty = False
+        self.dlg.visu.setRenderHints(QPainter.Antialiasing|QPainter.SmoothPixmapTransform)
 
-        #btn.clicked.connect(self.proxima_foto)
+
+
+
+        #layout = QVBoxLayout()
+        #layout.addWidget(self.dlg.visu)
+        #self.dlg.label_im_e.setLayout(layout)
+
+
+
+
+
+
 #================================================================
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -189,7 +215,41 @@ class smmt_plugin:
         filename_left_dir= QFileDialog.getExistingDirectory(self.dlg,"Selecionar Pasta com imagens camera da esquerda","/")
         self.dlg.lineEdit_e.setText(filename_left_dir)
 
+    def hasPhoto(self):
+        return not self.dlg.visu._empty
+
+    def fitInView(self,scale=True):
+        rect = QRectF(self.dlg._photo.pixmap().rect())
+        if not rect.isNull():
+            self.dlg.visu.setSceneRect(rect)
+            if self.hasPhoto():
+                unity = self.dlg.visu.transform().mapRect(QRectF(0,0,1,1))
+                self.dlg.visu.scale(1/unity.width(),1/unity.height())
+                viewrect = self.dlg.visu.viewport().rect()
+                scenerect = self.dlg.visu.transform().mapRect(rect)
+                factor = min(viewrect.width() / scenerect.width(), viewrect.height() / scenerect.height())
+                self.dlg.visu.scale(factor,factor)
+            self.dlg.visu._zoom = 0
+
+
+    def wheelEvent(self,ev):
+        if self.hasPhoto():
+            if event.delta() > 0:
+                factor = 1.25
+                self.dlg.visu._zoom += 1
+            else:
+                factor = 0.8
+                self.dlg.visu._zoom -= 1
+
+            if self.dlg.visu._zoom > 0:
+                self.dlg.visu.scale(factor, factor)
+            elif self.dlg.visu._zoom == 0:
+                self.fitInView()
+            else:
+                self.dlg.visu._zoom = 0
+
     def selecionar_fotos_direita(self):
+
         #filename_right = QFileDialog.getOpenFileNames(self.dlg, "Selecionar imagens câmera direita","/", '*.jpg, *.png')
         self.filename_right_dir= QFileDialog.getExistingDirectory(self.dlg,"Selecionar Pasta com imagens camera da direita","/")
         #list of jpeg files inside the folder
@@ -198,19 +258,20 @@ class smmt_plugin:
         #filename_right = QFileDialog.getOpenFileName(self.dlg,"cuzao","/home/lucas/Imagens")
         #self.dlg.lineEdit_d.setText(filename_right_dir)
         #img = QImage(filename_right)
-        self.dlg.label_im_d.resize(600,600)
+        #self.dlg.label_im_d.resize(600,600)
+
         self.index=0
-        pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.label_im_d.width(),self.dlg.label_im_d.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
-        self.dlg.label_im_d.setPixmap(pixmap)
+        pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) #.scaled(self.dlg.label_im_d.width(),self.dlg.label_im_d.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+        #self.dlg.cena.addPixmap(pixmap)
+        self.dlg._photo.setPixmap(pixmap)
+        self.dlg.visu.setScene(self.dlg.cena)
+        self.fitInView(self)
 
     def passar_foto(self):
         self.index +=1
         pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.label_im_d.width(),self.dlg.label_im_d.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
-        self.dlg.label_im_d.setPixmap(pixmap)
 
 
-    #def proxima_foto (self):
-    #    pixmap
 
 
 #====================================================================================
