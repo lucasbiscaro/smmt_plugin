@@ -73,13 +73,26 @@ class smmt_plugin:
         self.dlg.lineEdit_d.clear()
         self.dlg.pushButton_d.clicked.connect(self.selecionar_fotos_direita)
         self.dlg.pushButton_e.clicked.connect(self.selecionar_fotos_esquerda)
+
+        #BOTÕES
         btn = QPushButton("Quit", self.dlg)
         #btn.clicked.connect(QCoreApplication.instance().quit)
-        self.dlg.resize(2000,1000)
         btn2 = QPushButton("Next", self.dlg)
-        btn2.resize(btn2.sizeHint())
-        btn2.move(100,500)
+        btn3 = QPushButton("+", self.dlg)
+        btn4 = QPushButton("-", self.dlg)
+        btn2.resize(btn2.minimumSizeHint())
+        btn3.resize(35,35)
+        btn4.resize(35,35)
+        btn2.move(100,400)
+        btn3.move(100,500)
+        btn4.move(100,550)
         btn2.clicked.connect(self.passar_foto)
+        btn3.clicked.connect(self.zoomin)
+        btn4.clicked.connect(self.zoomout)
+
+
+
+        self.dlg.resize(2000,1000)
         self.dlg.cena = QGraphicsScene(self.dlg)
         self.dlg._photo = QGraphicsPixmapItem()
         self.dlg.cena.addItem(self.dlg._photo)
@@ -227,26 +240,15 @@ class smmt_plugin:
                 self.dlg.visu.scale(1/unity.width(),1/unity.height())
                 viewrect = self.dlg.visu.viewport().rect()
                 scenerect = self.dlg.visu.transform().mapRect(rect)
-                factor = min(viewrect.width() / scenerect.width(), viewrect.height() / scenerect.height())
-                self.dlg.visu.scale(factor,factor)
+                self.dlg.factor = min(viewrect.width() / scenerect.width(), viewrect.height() / scenerect.height())
+                self.dlg.visu.scale(self.dlg.factor,self.dlg.factor)
             self.dlg.visu._zoom = 0
 
+    def zoomin(self):
+        self.dlg.visu.scale(1.2,1.2)
 
-    def wheelEvent(self,ev):
-        if self.hasPhoto():
-            if event.delta() > 0:
-                factor = 1.25
-                self.dlg.visu._zoom += 1
-            else:
-                factor = 0.8
-                self.dlg.visu._zoom -= 1
-
-            if self.dlg.visu._zoom > 0:
-                self.dlg.visu.scale(factor, factor)
-            elif self.dlg.visu._zoom == 0:
-                self.fitInView()
-            else:
-                self.dlg.visu._zoom = 0
+    def zoomout(self):
+        self.dlg.visu.scale(0.8,0.8)
 
     def selecionar_fotos_direita(self):
 
