@@ -32,6 +32,7 @@ import os.path
 
 
 class smmt_plugin:
+
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
@@ -75,7 +76,7 @@ class smmt_plugin:
         self.dlg.pushButton_e.clicked.connect(self.selecionar_fotos_esquerda)
 
         #BOTÕES
-        btn = QPushButton("Quit", self.dlg)
+        #btn = QPushButton("Quit", self.dlg)
         #btn.clicked.connect(QCoreApplication.instance().quit)
         btn2 = QPushButton("PROXIMA", self.dlg)
         btn3 = QPushButton("+", self.dlg)
@@ -114,13 +115,25 @@ class smmt_plugin:
         self.dlg.visu.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.dlg.visu.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
         self.dlg.visu.setGeometry(300,300,400,400)
-        self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
+        #self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
         self.dlg.visu._zoom = 0
         self.dlg.visu._empty = False
         self.dlg.visu.setRenderHints(QPainter.Antialiasing|QPainter.SmoothPixmapTransform)
 
 
 
+        # Button to change from drag/pan to getting pixel info
+        btnPixInfo = QToolButton(self.dlg)
+        btnPixInfo.setText('Enter pixel info mode')
+        #btnPixInfo.clicked.connect(self.pixInfo)
+        btnPixInfo.resize(btnPixInfo.minimumSizeHint())
+        btnPixInfo.move(100,100)
+
+        photoClicked = pyqtSignal(QPoint)
+        self.dlg.editPixInfo = QLineEdit(self.dlg)
+        self.dlg.editPixInfo.setReadOnly(True)
+        #self.dlg.photoClicked.connect(self.photoClicked)
+        self.dlg._photo.mousePressEvent = self.pixelSelect
 
         #layout = QVBoxLayout()
         #layout.addWidget(self.dlg.visu)
@@ -308,6 +321,13 @@ class smmt_plugin:
             self.dlg._photo.setPixmap(pixmap)
             self.dlg.visu.setScene(self.dlg.cena)
             self.fitInView(self)
+
+    def photoClicked(self,pos):
+        self.editPixInfo.setText('%d, %d' % (pos.x(), pos.y()))
+
+    def pixelSelect(self,event):
+        position = QPoint( event.pos().x(),  event.pos().y())
+        self.dlg.editPixInfo.setText('%d, %d' % (event.pos().x(), event.pos().y()))
 
 
 
