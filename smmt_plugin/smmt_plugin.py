@@ -77,19 +77,29 @@ class smmt_plugin:
         #BOTÕES
         btn = QPushButton("Quit", self.dlg)
         #btn.clicked.connect(QCoreApplication.instance().quit)
-        btn2 = QPushButton("Next", self.dlg)
+        btn2 = QPushButton("PROXIMA", self.dlg)
         btn3 = QPushButton("+", self.dlg)
         btn4 = QPushButton("-", self.dlg)
+        btn5 = QPushButton("o", self.dlg)
+        btn6 = QPushButton("ANTERIOR", self.dlg)
+
         btn2.resize(btn2.minimumSizeHint())
         btn3.resize(35,35)
         btn4.resize(35,35)
-        btn2.move(100,400)
+        btn5.resize(35,35)
+        btn6.resize(btn6.minimumSizeHint())
+
+        btn2.move(200,400)
         btn3.move(100,500)
         btn4.move(100,550)
+        btn5.move(100,600)
+        btn6.move(100,400)
+
         btn2.clicked.connect(self.passar_foto)
         btn3.clicked.connect(self.zoomin)
         btn4.clicked.connect(self.zoomout)
-
+        btn5.clicked.connect(self.fitInView)
+        btn6.clicked.connect(self.voltar_foto)
 
 
         self.dlg.resize(2000,1000)
@@ -103,7 +113,7 @@ class smmt_plugin:
         self.dlg.visu.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.dlg.visu.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.dlg.visu.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-        #self.dlg.visu.setGeometry(300,300,400,400)
+        self.dlg.visu.setGeometry(300,300,400,400)
         self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
         self.dlg.visu._zoom = 0
         self.dlg.visu._empty = False
@@ -270,9 +280,35 @@ class smmt_plugin:
         self.fitInView(self)
 
     def passar_foto(self):
-        self.index +=1
-        pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.label_im_d.width(),self.dlg.label_im_d.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+        if self.index >= len(self.files):
+            self.index = len(self.files)
+            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.visu.width(),self.dlg.visu.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+            self.dlg._photo.setPixmap(pixmap)
+            self.dlg.visu.setScene(self.dlg.cena)
+            self.fitInView(self)
 
+        else:
+            self.index +=1
+            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.visu.width(),self.dlg.visu.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+            self.dlg._photo.setPixmap(pixmap)
+            self.dlg.visu.setScene(self.dlg.cena)
+            self.fitInView(self)
+
+
+    def voltar_foto(self):
+        if self.index <= 0:
+            self.index = 0
+            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.visu.width(),self.dlg.visu.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+            self.dlg._photo.setPixmap(pixmap)
+            self.dlg.visu.setScene(self.dlg.cena)
+            self.fitInView(self)
+
+        else:
+            self.index -=1
+            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.visu.width(),self.dlg.visu.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+            self.dlg._photo.setPixmap(pixmap)
+            self.dlg.visu.setScene(self.dlg.cena)
+            self.fitInView(self)
 
 
 
