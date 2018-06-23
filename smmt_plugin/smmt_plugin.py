@@ -266,7 +266,8 @@ class smmt_plugin:
         self.filename_right_dir= QFileDialog.getExistingDirectory(self.dlg,"Selecionar Pasta com imagens camera da direita","/")
         #list of jpeg files inside the folder
         #files = [name for name in os.listdir(str(filename_right_dir)) if name.endswith('.png')]
-        self.files = os.listdir(self.filename_right_dir)
+        self.files = sorted(os.listdir(self.filename_right_dir))
+
         #filename_right = QFileDialog.getOpenFileName(self.dlg,"cuzao","/home/lucas/Imagens")
         #self.dlg.lineEdit_d.setText(filename_right_dir)
         #img = QImage(filename_right)
@@ -280,32 +281,30 @@ class smmt_plugin:
         self.fitInView(self)
 
     def passar_foto(self):
+        self.index += 1
+
         if self.index >= len(self.files):
             self.index = len(self.files)
-            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.visu.width(),self.dlg.visu.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
-            self.dlg._photo.setPixmap(pixmap)
-            self.dlg.visu.setScene(self.dlg.cena)
-            self.fitInView(self)
 
         else:
-            self.index +=1
-            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.visu.width(),self.dlg.visu.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index]))
             self.dlg._photo.setPixmap(pixmap)
             self.dlg.visu.setScene(self.dlg.cena)
             self.fitInView(self)
 
 
     def voltar_foto(self):
+        self.index -=1
+
         if self.index <= 0:
             self.index = 0
-            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.visu.width(),self.dlg.visu.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index]))
             self.dlg._photo.setPixmap(pixmap)
             self.dlg.visu.setScene(self.dlg.cena)
             self.fitInView(self)
 
         else:
-            self.index -=1
-            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) .scaled(self.dlg.visu.width(),self.dlg.visu.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index]))
             self.dlg._photo.setPixmap(pixmap)
             self.dlg.visu.setScene(self.dlg.cena)
             self.fitInView(self)
