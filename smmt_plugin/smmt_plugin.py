@@ -75,59 +75,144 @@ class smmt_plugin:
         self.dlg.pushButton_d.clicked.connect(self.selecionar_fotos_direita)
         self.dlg.pushButton_e.clicked.connect(self.selecionar_fotos_esquerda)
 
+        self.dlg.resize(1000,650)
+
         #BOTÕES
-        #btn = QPushButton("Quit", self.dlg)
-        #btn.clicked.connect(QCoreApplication.instance().quit)
-        btn2 = QPushButton("PROXIMA", self.dlg)
-        btn3 = QPushButton("+", self.dlg)
-        btn4 = QPushButton("-", self.dlg)
-        btn5 = QPushButton("o", self.dlg)
-        btn6 = QPushButton("ANTERIOR", self.dlg)
+        self.dlg.bproxima = QPushButton("PROXIMA", self.dlg)
+        self.dlg.banterior = QPushButton("ANTERIOR", self.dlg)
 
-        btn2.resize(btn2.minimumSizeHint())
-        btn3.resize(35,35)
-        btn4.resize(35,35)
-        btn5.resize(35,35)
-        btn6.resize(btn6.minimumSizeHint())
+        self.dlg.bproxima.clicked.connect(self.passar_foto)
+        self.dlg.banterior.clicked.connect(self.voltar_foto)
 
-        btn2.move(200,400)
-        btn3.move(100,500)
-        btn4.move(100,550)
-        btn5.move(100,600)
-        btn6.move(100,400)
+        self.dlg.bproxima.setEnabled(False)
+        self.dlg.banterior.setEnabled(False)
 
-        btn2.clicked.connect(self.passar_foto)
-        btn3.clicked.connect(self.zoomin)
-        btn4.clicked.connect(self.zoomout)
-        btn5.clicked.connect(self.fitInView)
-        btn6.clicked.connect(self.voltar_foto)
+        #Botões Direita
+        bzoomin_d = QPushButton("+", self.dlg)
+        bzoomout_d = QPushButton("-", self.dlg)
+        bfitinview_d = QPushButton("o", self.dlg)
 
+        bzoomin_d.clicked.connect(self.zoomin_d)
+        bzoomout_d.clicked.connect(self.zoomout_d)
+        bfitinview_d.clicked.connect(self.fitInView_d)
 
-        self.dlg.resize(2000,1000)
-        self.dlg.cena = QGraphicsScene(self.dlg)
-        self.dlg._photo = QGraphicsPixmapItem()
-        self.dlg.cena.addItem(self.dlg._photo)
-        self.dlg.visu = QGraphicsView(self.dlg)
-        self.dlg.visu.setScene(self.dlg.cena)
-        self.dlg.visu.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-        self.dlg.visu.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
-        self.dlg.visu.setFrameShape(QFrame.NoFrame)
-        self.dlg.visu.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.dlg.visu.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.dlg.visu.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
-        self.dlg.visu.setGeometry(300,300,400,400)
-        #self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
-        self.dlg._zoom = 0
-        self.dlg._empty = True
-        self.dlg.visu.setRenderHints(QPainter.Antialiasing|QPainter.SmoothPixmapTransform)
+        #Botões Esquerda
+        bzoomin_e = QPushButton("+", self.dlg)
+        bzoomout_e = QPushButton("-", self.dlg)
+        bfitinview_e = QPushButton("o", self.dlg)
 
-        self.dlg.editPixInfo = QLineEdit(self.dlg)
-        self.dlg.editPixInfo.setReadOnly(True)
+        bzoomin_e.clicked.connect(self.zoomin_e)
+        bzoomout_e.clicked.connect(self.zoomout_e)
+        bfitinview_e.clicked.connect(self.fitInView_e)
 
 
-        #layout = QVBoxLayout()
-        #layout.addWidget(self.dlg.visu)
-        #self.dlg.label_im_e.setLayout(layout)
+        #Janelas Direta(r) e esquerda(l)
+        self.dlg.cena_d = QGraphicsScene(self.dlg)
+        self.dlg.cena_e = QGraphicsScene(self.dlg)
+
+        self.dlg._photo_d = QGraphicsPixmapItem()
+        self.dlg._photo_e = QGraphicsPixmapItem()
+
+        self.dlg.cena_d.addItem(self.dlg._photo_d)
+        self.dlg.cena_e.addItem(self.dlg._photo_e)
+
+        self.dlg.visu_d = QGraphicsView(self.dlg)
+        self.dlg.visu_e = QGraphicsView(self.dlg)
+
+        self.dlg.visu_d.setScene(self.dlg.cena_d)
+        self.dlg.visu_e.setScene(self.dlg.cena_e)
+
+        self.dlg.visu_d.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.dlg.visu_e.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+
+        self.dlg.visu_d.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        self.dlg.visu_e.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+
+        self.dlg.visu_d.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.dlg.visu_e.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.dlg.visu_d.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.dlg.visu_e.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.dlg.visu_d.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
+        self.dlg.visu_e.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
+
+        self.dlg._zoom_d = 0
+        self.dlg._zoom_e = 0
+
+        self.dlg._empty_d = True
+        self.dlg._empty_e = True
+
+        self.dlg.visu_d.setRenderHints(QPainter.Antialiasing|QPainter.SmoothPixmapTransform)
+        self.dlg.visu_e.setRenderHints(QPainter.Antialiasing|QPainter.SmoothPixmapTransform)
+
+        self.dlg.editPixInfo_d = QLineEdit(self.dlg)
+        self.dlg.editPixInfo_e = QLineEdit(self.dlg)
+
+        self.dlg.editPixInfo_d.setReadOnly(True)
+        self.dlg.editPixInfo_e.setReadOnly(True)
+
+        #Agrupando objetos em um mesmo layout (direita)
+        vertical_e = QWidget(self.dlg)
+        vertical_e.setGeometry(QRect(50,100,900,450))
+        vertical_e.setObjectName("Camera esquerda")
+        HBlayout_e = QHBoxLayout(vertical_e)
+        VBlayout_e1 = QVBoxLayout()
+        VBlayout_e1.addWidget(self.dlg.visu_e)
+        VBlayout_e2 = QVBoxLayout()
+        VBlayout_e2.addWidget(self.dlg.bproxima)
+        VBlayout_e2.addWidget(self.dlg.banterior)
+        HBlayout_e3 = QHBoxLayout()
+        HBlayout_e3.setAlignment(Qt.AlignLeft)
+        HBlayout_e3.addWidget(bzoomin_e)
+        HBlayout_e3.addWidget(bzoomout_e)
+        HBlayout_e3.addWidget(bfitinview_e)
+        HBlayout_e3.addWidget(self.dlg.editPixInfo_e)
+        VBlayout_e1.addLayout(HBlayout_e3)
+        HBlayout_e.addLayout(VBlayout_e1)
+        HBlayout_e.addLayout(VBlayout_e2)
+
+        VBlayout_d1 = QVBoxLayout()
+        VBlayout_d1.addWidget(self.dlg.visu_d)
+        HBlayout_d3 = QHBoxLayout()
+        HBlayout_d3.setAlignment(Qt.AlignLeft)
+        HBlayout_d3.addWidget(bzoomin_d)
+        HBlayout_d3.addWidget(bzoomout_d)
+        HBlayout_d3.addWidget(bfitinview_d)
+        HBlayout_d3.addWidget(self.dlg.editPixInfo_d)
+        VBlayout_d1.addLayout(HBlayout_d3)
+        HBlayout_e.addLayout(VBlayout_d1)
+
+        #Agrupando objetos em um mesmo layout (esquerda)
+        #vertical_e = QWidget(self.dlg)
+        #vertical_e.setGeometry(QRect(50,100,400,400))
+        #vertical_e.setObjectName("Camera esquerda")
+        #VBlayout_e = QVBoxLayout(vertical_e)
+        #VBlayout_e.addWidget(self.dlg.visu_e)
+        #HBlayout_e = QHBoxLayout()
+        #HBlayout_e.setAlignment(Qt.AlignLeft)
+        #HBlayout_e.addWidget(bzoomin_e)
+        #HBlayout_e.addWidget(bzoomout_e)
+        #HBlayout_e.addWidget(bfitinview_e)
+        #HBlayout_e.addWidget(self.dlg.editPixInfo_e)
+        #VBlayout_e.addLayout(HBlayout_e)
+
+        #Juntando layouts
+        #junto = QWidget(self.dlg)
+        #junto.setGeometry(QRect(100,600,400,400))
+        #vjunto = QHBoxLayout(junto)
+        #vjunto.addLayout(VBlayout_e)
+        #vjunto.addWidget(self.dlg.bproxima)
+        #vjunto.addWidget(self.dlg.banterior)
+        #vjunto.addLayout(VBlayout_d)
+
+
+        #Algumas consideraçãoes iniciais
+        self.dlg.pixmap_left = 0
+        self.dlg.pixmap_eight = 0
+
+        self.filename_right_dir = 0
+        self.filename_left_dir = 0
 
 #================================================================
     # noinspection PyMethodMayBeStatic
@@ -230,101 +315,177 @@ class smmt_plugin:
         # remove the toolbar
         del self.toolbar
 #====================================================================
+    def hasPhoto_d(self):
+        return not self.dlg._empty_d
 
-    def selecionar_fotos_esquerda(self):
-        #filename_left = QFileDialog.getOpenFileNames(self.dlg, "Selecionar imagens câmera esquerda","/", '*.jpg, *.png')
-        filename_left_dir= QFileDialog.getExistingDirectory(self.dlg,"Selecionar Pasta com imagens camera da esquerda","/")
-        self.dlg.lineEdit_e.setText(filename_left_dir)
+    def hasPhoto_e(self):
+        return not self.dlg._empty_e
 
-    def hasPhoto(self):
-        return not self.dlg._empty
+    def fitInView_d(self, scale=True):
+        rect_d = QRectF(self.dlg._photo_d.pixmap().rect())
+        if not rect_d.isNull():
+            self.dlg.visu_d.setSceneRect(rect_d)
+            if self.hasPhoto_d():
+                unity_d = self.dlg.visu_d.transform().mapRect(QRectF(0,0,1,1))
+                self.dlg.visu_d.scale(1/unity_d.width(),1/unity_d.height())
+                viewrect_d = self.dlg.visu_d.viewport().rect()
+                scenerect_d = self.dlg.visu_d.transform().mapRect(rect_d)
+                self.dlg.factor_d = min(viewrect_d.width() / scenerect_d.width(), viewrect_d.height() / scenerect_d.height())
+                self.dlg.visu_d.scale(self.dlg.factor_d,self.dlg.factor_d)
+            self.dlg._zoom_d = 0
 
-    def fitInView(self, scale=True):
-        rect = QRectF(self.dlg._photo.pixmap().rect())
-        if not rect.isNull():
-            self.dlg.visu.setSceneRect(rect)
-            if self.hasPhoto():
-                unity = self.dlg.visu.transform().mapRect(QRectF(0,0,1,1))
-                self.dlg.visu.scale(1/unity.width(),1/unity.height())
-                viewrect = self.dlg.visu.viewport().rect()
-                scenerect = self.dlg.visu.transform().mapRect(rect)
-                self.dlg.factor = min(viewrect.width() / scenerect.width(), viewrect.height() / scenerect.height())
-                self.dlg.visu.scale(self.dlg.factor,self.dlg.factor)
-            self.dlg.visu._zoom = 0
+    def fitInView_e(self, scale=True):
+        rect_e = QRectF(self.dlg._photo_e.pixmap().rect())
+        if not rect_e.isNull():
+            self.dlg.visu_e.setSceneRect(rect_e)
+            if self.hasPhoto_e():
+                unity_e = self.dlg.visu_e.transform().mapRect(QRectF(0,0,1,1))
+                self.dlg.visu_e.scale(1/unity_e.width(),1/unity_e.height())
+                viewrect_e = self.dlg.visu_e.viewport().rect()
+                scenerect_e = self.dlg.visu_e.transform().mapRect(rect_e)
+                self.dlg.factor_e = min(viewrect_e.width() / scenerect_e.width(), viewrect_e.height() / scenerect_e.height())
+                self.dlg.visu_e.scale(self.dlg.factor_e,self.dlg.factor_e)
+            self.dlg._zoom_e = 0
 
-    def zoomin(self):
-        self.dlg.visu.scale(1.2,1.2)
+    def zoomin_d(self):
+        self.dlg.visu_d.scale(1.2,1.2)
 
-    def zoomout(self):
-        self.dlg.visu.scale(0.8,0.8)
+    def zoomin_e(self):
+        self.dlg.visu_e.scale(1.2,1.2)
 
-    def setPhoto(self, pixmap=None):
-        self.dlg._zoom = 0
-        if pixmap and not pixmap.isNull():
-            self.dlg._empty = False
-            self.dlg._photo.setPixmap(pixmap)
-            self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
-            self.dlg._photo.mouseDoubleClickEvent = self.pixelSelect
+    def zoomout_d(self):
+        self.dlg.visu_d.scale(0.8,0.8)
+
+    def zoomout_e(self):
+        self.dlg.visu_e.scale(0.8,0.8)
+
+    def setPhoto_left(self, pixmap=None):
+        self.dlg._zoom_e = 0
+        if self.dlg.pixmap_left and not self.dlg.pixmap_left.isNull():
+            self.dlg._empty_e = False
+            self.dlg._photo_e.setPixmap(self.dlg.pixmap_left)
+            self.dlg.visu_e.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.dlg._photo_e.mouseDoubleClickEvent = self.pixelSelect_e
+            self.dlg.editPixInfo_e.clear()
 
         else:
-            self.dlg._empty = True
-            self.dlg.visu.setDragMode(QGraphicsView.NoDrag)
-            self.dlg._photo.setPixmap(QPixmap())
-        self.fitInView()
+            self.dlg._empty_e = True
+            self.dlg.visu_e.setDragMode(QGraphicsView.NoDrag)
+            self.dlg._photo_e.setPixmap(QPixmap())
+        self.fitInView_e()
+
+    def setPhoto_right(self, pixmap=None):
+        self.dlg._zoom_d = 0
+        if self.dlg.pixmap_right and not self.dlg.pixmap_right.isNull():
+            self.dlg._empty_d = False
+            self.dlg._photo_d.setPixmap(self.dlg.pixmap_right)
+            self.dlg.visu_d.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.dlg._photo_d.mouseDoubleClickEvent = self.pixelSelect_d
+            self.dlg.editPixInfo_d.clear()
+
+        else:
+            self.dlg._empty_d = True
+            self.dlg.visu_d.setDragMode(QGraphicsView.NoDrag)
+            self.dlg._photo_d.setPixmap(QPixmap())
+        self.fitInView_d()
 
     def selecionar_fotos_direita(self):
-
+        self.index=0
+        self.dlg.lineEdit_d.clear()
         #filename_right = QFileDialog.getOpenFileNames(self.dlg, "Selecionar imagens câmera direita","/", '*.jpg, *.png')
-        self.filename_right_dir= QFileDialog.getExistingDirectory(self.dlg,"Selecionar Pasta com imagens camera da direita","/")
-        #list of jpeg files inside the folder
-        #files = [name for name in os.listdir(str(filename_right_dir)) if name.endswith('.png')]
-        self.files = sorted(os.listdir(self.filename_right_dir))
+        self.filename_right_dir =  QFileDialog.getExistingDirectory(self.dlg,"Selecionar pasta com imagens camera da direita","/")
+
 
         #filename_right = QFileDialog.getOpenFileName(self.dlg,"cuzao","/home/lucas/Imagens")
         #self.dlg.lineEdit_d.setText(filename_right_dir)
         #img = QImage(filename_right)
         #self.dlg.label_im_d.resize(600,600)
 
+        if self.filename_right_dir != '':
+            self.files_right = sorted(os.listdir(self.filename_right_dir))
+            self.dlg.pixmap_right = QPixmap(os.path.join(self.filename_right_dir,self.files_right[self.index]))
+            self.setPhoto_right(self.dlg.pixmap_right)
+            self.dlg.lineEdit_d.setText(self.filename_right_dir)
+            self.habilitarbotao()
+
+    def selecionar_fotos_esquerda(self):
         self.index=0
-        pixmap=QPixmap(os.path.join(self.filename_right_dir,self.files[self.index]))
-        self.setPhoto(pixmap)
-        #pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) #.scaled(self.dlg.label_im_d.width(),self.dlg.label_im_d.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
-        #self.dlg._photo.setPixmap(pixmap)
-        #self.dlg.visu.setScene(self.dlg.cena)
-        #self.fitInView(self)
+        self.dlg.lineEdit_e.clear()
+        self.filename_left_dir = QFileDialog.getExistingDirectory(self.dlg,"Selecionar Pasta com imagens camera da esquerda","/")
+
+        if self.filename_right_dir != '':
+            self.files_left = sorted(os.listdir(self.filename_left_dir))
+            self.dlg.pixmap_left = QPixmap(os.path.join(self.filename_left_dir,self.files_left[self.index]))
+            self.setPhoto_left(self.dlg.pixmap_left)
+            self.dlg.lineEdit_e.setText(self.filename_left_dir)
+            self.habilitarbotao()
 
     def passar_foto(self):
         self.index += 1
 
-        if self.index >= len(self.files):
-            self.index = len(self.files)
+        if self.index >= len(self.files_left) and self.index >= len(self.files_right):
+            self.index = len(self.files_left)
+            self.index = len(self.files_right)
 
         else:
-            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index]))
-            self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
-            self.setPhoto(pixmap)
-            self.fitInView(self)
+            self.dlg.pixmap_left = QPixmap(os.path.join(self.filename_left_dir,self.files_left[self.index]))
+            self.dlg.visu_e.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.setPhoto_left(self.dlg.pixmap_left)
+            self.fitInView_e(self)
+            self.dlg.editPixInfo_e.clear()
+
+            self.dlg.pixmap_right = QPixmap(os.path.join(self.filename_right_dir,self.files_right[self.index]))
+            self.dlg.visu_d.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.setPhoto_right(self.dlg.pixmap_right)
+            self.fitInView_d(self)
+            self.dlg.editPixInfo_d.clear()
 
     def voltar_foto(self):
         self.index -=1
 
         if self.index <= 0:
             self.index = 0
-            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index]))
-            self.setPhoto(pixmap)
-            self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
-            self.fitInView(self)
+            self.dlg.pixmap_left = QPixmap(os.path.join(self.filename_left_dir,self.files_left[self.index]))
+            self.dlg.visu_e.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.setPhoto_left(self.dlg.pixmap_left)
+            self.fitInView_e(self)
+            self.dlg.editPixInfo_e.clear()
+
+            self.dlg.pixmap_right = QPixmap(os.path.join(self.filename_right_dir,self.files_right[self.index]))
+            self.dlg.visu_d.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.setPhoto_right(self.dlg.pixmap_right)
+            self.fitInView_d(self)
+            self.dlg.editPixInfo_d.clear()
 
         else:
-            pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index]))
-            self.setPhoto(pixmap)
-            self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
-            self.fitInView(self)
+            self.dlg.pixmap_left = QPixmap(os.path.join(self.filename_left_dir,self.files_left[self.index]))
+            self.dlg.visu_e.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.setPhoto_left(self.dlg.pixmap_left)
+            self.fitInView_e(self)
+            self.dlg.editPixInfo_e.clear()
 
-    def pixelSelect(self,event):
-        #if self.dlg.visu.dragMode() == QGraphicsView.NoDrag:
-        position = QPoint( event.pos().x(),  event.pos().y())
-        self.dlg.editPixInfo.setText('%d, %d' % (event.pos().x(), event.pos().y()))
+            self.dlg.pixmap_right = QPixmap(os.path.join(self.filename_right_dir,self.files_right[self.index]))
+            self.dlg.visu_d.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.setPhoto_right(self.dlg.pixmap_right)
+            self.fitInView_d(self)
+            self.dlg.editPixInfo_d.clear()
+
+    def pixelSelect_d(self,event):
+        position_d = QPoint( event.pos().x(),  event.pos().y())
+        self.dlg.editPixInfo_d.setText('%d, %d' % (event.pos().x(), event.pos().y()))
+
+    def pixelSelect_e(self,event):
+        position_e = QPoint( event.pos().x(),  event.pos().y())
+        self.dlg.editPixInfo_e.setText('%d, %d' % (event.pos().x(), event.pos().y()))
+
+    def habilitarbotao(self):
+        if self.dlg.pixmap_left == 0 or self.dlg.pixmap_right == 0:
+            self.dlg.bproxima.setEnabled(False)
+            self.dlg.banterior.setEnabled(False)
+
+        else:
+            self.dlg.bproxima.setEnabled(True)
+            self.dlg.banterior.setEnabled(True)
 
 
 
@@ -337,8 +498,8 @@ class smmt_plugin:
         # Run the dialog event loop
         result = self.dlg.exec_()
         # See if OK was pressed
-        if result:
+        #if result:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
-            filename_left = self.dlg.lineEdit_e.text()
-            filename_right = self.dlg.lineEdit_d.text()
+            #filename_left = self.dlg.lineEdit_e.text()
+            #filename_right = self.dlg.lineEdit_d.text()
