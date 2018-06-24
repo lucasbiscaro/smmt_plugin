@@ -108,6 +108,7 @@ class smmt_plugin:
         self.dlg._photo = QGraphicsPixmapItem()
         self.dlg.cena.addItem(self.dlg._photo)
         self.dlg.visu = QGraphicsView(self.dlg)
+        self.dlg.visu.setScene(self.dlg.cena)
         self.dlg.visu.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.dlg.visu.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.dlg.visu.setFrameShape(QFrame.NoFrame)
@@ -116,33 +117,17 @@ class smmt_plugin:
         self.dlg.visu.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
         self.dlg.visu.setGeometry(300,300,400,400)
         #self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
-        self.dlg.visu._zoom = 0
-        self.dlg.visu._empty = False
+        self.dlg._zoom = 0
+        self.dlg._empty = True
         self.dlg.visu.setRenderHints(QPainter.Antialiasing|QPainter.SmoothPixmapTransform)
 
-
-
-        # Button to change from drag/pan to getting pixel info
-        btnPixInfo = QToolButton(self.dlg)
-        btnPixInfo.setText('Enter pixel info mode')
-        #btnPixInfo.clicked.connect(self.pixInfo)
-        btnPixInfo.resize(btnPixInfo.minimumSizeHint())
-        btnPixInfo.move(100,100)
-
-        photoClicked = pyqtSignal(QPoint)
         self.dlg.editPixInfo = QLineEdit(self.dlg)
         self.dlg.editPixInfo.setReadOnly(True)
-        #self.dlg.photoClicked.connect(self.photoClicked)
-        self.dlg._photo.mousePressEvent = self.pixelSelect
+
 
         #layout = QVBoxLayout()
         #layout.addWidget(self.dlg.visu)
         #self.dlg.label_im_e.setLayout(layout)
-
-
-
-
-
 
 #================================================================
     # noinspection PyMethodMayBeStatic
@@ -252,9 +237,9 @@ class smmt_plugin:
         self.dlg.lineEdit_e.setText(filename_left_dir)
 
     def hasPhoto(self):
-        return not self.dlg.visu._empty
+        return not self.dlg._empty
 
-    def fitInView(self,scale=True):
+    def fitInView(self, scale=True):
         rect = QRectF(self.dlg._photo.pixmap().rect())
         if not rect.isNull():
             self.dlg.visu.setSceneRect(rect)
@@ -273,6 +258,20 @@ class smmt_plugin:
     def zoomout(self):
         self.dlg.visu.scale(0.8,0.8)
 
+    def setPhoto(self, pixmap=None):
+        self.dlg._zoom = 0
+        if pixmap and not pixmap.isNull():
+            self.dlg._empty = False
+            self.dlg._photo.setPixmap(pixmap)
+            self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.dlg._photo.mouseDoubleClickEvent = self.pixelSelect
+
+        else:
+            self.dlg._empty = True
+            self.dlg.visu.setDragMode(QGraphicsView.NoDrag)
+            self.dlg._photo.setPixmap(QPixmap())
+        self.fitInView()
+
     def selecionar_fotos_direita(self):
 
         #filename_right = QFileDialog.getOpenFileNames(self.dlg, "Selecionar imagens câmera direita","/", '*.jpg, *.png')
@@ -287,11 +286,12 @@ class smmt_plugin:
         #self.dlg.label_im_d.resize(600,600)
 
         self.index=0
-        pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) #.scaled(self.dlg.label_im_d.width(),self.dlg.label_im_d.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
-        #self.dlg.cena.addPixmap(pixmap)
-        self.dlg._photo.setPixmap(pixmap)
-        self.dlg.visu.setScene(self.dlg.cena)
-        self.fitInView(self)
+        pixmap=QPixmap(os.path.join(self.filename_right_dir,self.files[self.index]))
+        self.setPhoto(pixmap)
+        #pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index])) #.scaled(self.dlg.label_im_d.width(),self.dlg.label_im_d.height(),Qt.KeepAspectRatio,Qt.SmoothTransformation)
+        #self.dlg._photo.setPixmap(pixmap)
+        #self.dlg.visu.setScene(self.dlg.cena)
+        #self.fitInView(self)
 
     def passar_foto(self):
         self.index += 1
@@ -301,10 +301,9 @@ class smmt_plugin:
 
         else:
             pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index]))
-            self.dlg._photo.setPixmap(pixmap)
-            self.dlg.visu.setScene(self.dlg.cena)
+            self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.setPhoto(pixmap)
             self.fitInView(self)
-
 
     def voltar_foto(self):
         self.index -=1
@@ -312,20 +311,18 @@ class smmt_plugin:
         if self.index <= 0:
             self.index = 0
             pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index]))
-            self.dlg._photo.setPixmap(pixmap)
-            self.dlg.visu.setScene(self.dlg.cena)
+            self.setPhoto(pixmap)
+            self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
             self.fitInView(self)
 
         else:
             pixmap = QPixmap(os.path.join(self.filename_right_dir,self.files[self.index]))
-            self.dlg._photo.setPixmap(pixmap)
-            self.dlg.visu.setScene(self.dlg.cena)
+            self.setPhoto(pixmap)
+            self.dlg.visu.setDragMode(QGraphicsView.ScrollHandDrag)
             self.fitInView(self)
 
-    def photoClicked(self,pos):
-        self.editPixInfo.setText('%d, %d' % (pos.x(), pos.y()))
-
     def pixelSelect(self,event):
+        #if self.dlg.visu.dragMode() == QGraphicsView.NoDrag:
         position = QPoint( event.pos().x(),  event.pos().y())
         self.dlg.editPixInfo.setText('%d, %d' % (event.pos().x(), event.pos().y()))
 
