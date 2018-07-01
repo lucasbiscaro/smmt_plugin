@@ -29,6 +29,7 @@ import glob
 # Import the code for the dialog
 from smmt_plugin_dialog import smmt_pluginDialog
 import os.path
+import csv
 
 
 class smmt_plugin:
@@ -72,6 +73,10 @@ class smmt_plugin:
 #===============================================================
         self.dlg.lineEdit_e.clear()
         self.dlg.lineEdit_d.clear()
+
+        #self.dlg.tableWidget.horizontalHeaderItem().setTextAlignment(Qt.AlignHCenter)
+        #self.dlg.tableWidget.setReadOnly(True)
+
         self.dlg.pushButton_d.clicked.connect(self.selecionar_fotos_direita)
         self.dlg.pushButton_e.clicked.connect(self.selecionar_fotos_esquerda)
 
@@ -80,9 +85,12 @@ class smmt_plugin:
         #BOTÕES
         self.dlg.bproxima = QPushButton("PROXIMA", self.dlg)
         self.dlg.banterior = QPushButton("ANTERIOR", self.dlg)
+        self.dlg.bpoe = QPushButton("POE", self.dlg)
 
         self.dlg.bproxima.clicked.connect(self.passar_foto)
         self.dlg.banterior.clicked.connect(self.voltar_foto)
+        self.dlg.bpoe.clicked.connect(self.ler_arquivo_texto)
+
 
         self.dlg.bproxima.setEnabled(False)
         self.dlg.banterior.setEnabled(False)
@@ -152,9 +160,9 @@ class smmt_plugin:
         self.dlg.editPixInfo_d.setReadOnly(True)
         self.dlg.editPixInfo_e.setReadOnly(True)
 
-        #Agrupando objetos em um mesmo layout (direita)
+        #Agrupando objetos em um mesmo layout (direita e esqueda)
         vertical_e = QWidget(self.dlg)
-        vertical_e.setGeometry(QRect(50,100,900,450))
+        vertical_e.setGeometry(QRect(30,150,900,450))
         vertical_e.setObjectName("Camera esquerda")
         HBlayout_e = QHBoxLayout(vertical_e)
         VBlayout_e1 = QVBoxLayout()
@@ -183,28 +191,7 @@ class smmt_plugin:
         VBlayout_d1.addLayout(HBlayout_d3)
         HBlayout_e.addLayout(VBlayout_d1)
 
-        #Agrupando objetos em um mesmo layout (esquerda)
-        #vertical_e = QWidget(self.dlg)
-        #vertical_e.setGeometry(QRect(50,100,400,400))
-        #vertical_e.setObjectName("Camera esquerda")
-        #VBlayout_e = QVBoxLayout(vertical_e)
-        #VBlayout_e.addWidget(self.dlg.visu_e)
-        #HBlayout_e = QHBoxLayout()
-        #HBlayout_e.setAlignment(Qt.AlignLeft)
-        #HBlayout_e.addWidget(bzoomin_e)
-        #HBlayout_e.addWidget(bzoomout_e)
-        #HBlayout_e.addWidget(bfitinview_e)
-        #HBlayout_e.addWidget(self.dlg.editPixInfo_e)
-        #VBlayout_e.addLayout(HBlayout_e)
 
-        #Juntando layouts
-        #junto = QWidget(self.dlg)
-        #junto.setGeometry(QRect(100,600,400,400))
-        #vjunto = QHBoxLayout(junto)
-        #vjunto.addLayout(VBlayout_e)
-        #vjunto.addWidget(self.dlg.bproxima)
-        #vjunto.addWidget(self.dlg.banterior)
-        #vjunto.addLayout(VBlayout_d)
 
 
         #Algumas consideraçãoes iniciais
@@ -486,6 +473,66 @@ class smmt_plugin:
         else:
             self.dlg.bproxima.setEnabled(True)
             self.dlg.banterior.setEnabled(True)
+
+    def ler_arquivo_texto(self):
+        name = QFileDialog.getOpenFileName(self.dlg,"Selecionar os parametros de orietacao exterior","/")
+
+        texto = []
+        reader = csv.reader(open(name), delimiter = ',')
+        for row in reader:
+            texto.append(row)
+
+        rowCount = len(texto)
+        colCount = max([len(p) for p in texto])
+
+        self.dlg.tableWidget.setRowCount(rowCount)
+        self.dlg.tableWidget.setColumnCount(colCount)
+
+        self.dlg.tableWidget.setHorizontalHeaderLabels(('ID_Foto','Longitude','Latitude','Altitude','X0','Y0','Z0','omega','phy','kappa','bla1','bla2','bla3'))
+
+        for row, foto in enumerate(texto):
+            for column, value in enumerate(foto):
+                newItem = QTableWidgetItem(value)
+                newItem.setFlags(Qt.ItemIsEnabled)
+                self.dlg.tableWidget.setItem(row, column, newItem)
+
+    #descobrir uma maneira de resetar tudo quando fechado
+    def reset(self):
+        self.dlg.cena_d = QGraphicsScene(self.dlg)
+        self.dlg.cena_e = QGraphicsScene(self.dlg)
+
+        self.dlg._photo_d = QGraphicsPixmapItem()
+        self.dlg._photo_e = QGraphicsPixmapItem()
+
+        self.dlg.cena_d.addItem(self.dlg._photo_d)
+        self.dlg.cena_e.addItem(self.dlg._photo_e)
+
+        self.dlg.visu_d = QGraphicsView(self.dlg)
+        self.dlg.visu_e = QGraphicsView(self.dlg)
+
+        self.dlg.visu_d.setScene(self.dlg.cena_d)
+        self.dlg.visu_e.setScene(self.dlg.cena_e)
+
+        self.dlg.visu_d.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.dlg.visu_e.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+
+        self.dlg.visu_d.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        self.dlg.visu_e.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+
+        self.dlg.visu_d.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.dlg.visu_e.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.dlg.visu_d.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.dlg.visu_e.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.dlg.visu_d.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
+        self.dlg.visu_e.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
+
+        self.dlg._zoom_d = 0
+        self.dlg._zoom_e = 0
+
+        self.dlg._empty_d = True
+        self.dlg._empty_e = True
 
 
 
