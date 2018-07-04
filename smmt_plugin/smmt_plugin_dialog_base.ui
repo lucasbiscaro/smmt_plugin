@@ -114,20 +114,14 @@
     </rect>
    </property>
   </widget>
-  <widget class="QTableWidget" name="tableWidget">
+  <widget class="QPlainTextEdit" name="plainTextEdit">
    <property name="geometry">
     <rect>
-     <x>640</x>
-     <y>10</y>
-     <width>351</width>
-     <height>171</height>
+     <x>590</x>
+     <y>20</y>
+     <width>341</width>
+     <height>141</height>
     </rect>
-   </property>
-   <property name="mouseTracking">
-    <bool>false</bool>
-   </property>
-   <property name="alternatingRowColors">
-    <bool>true</bool>
    </property>
   </widget>
  </widget>

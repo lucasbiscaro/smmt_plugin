@@ -30,6 +30,8 @@ import glob
 from smmt_plugin_dialog import smmt_pluginDialog
 import os.path
 import csv
+import numpy as np
+import math
 
 
 class smmt_plugin:
@@ -41,7 +43,7 @@ class smmt_plugin:
         :param iface: An interface instance that will be passed to this class
             which provides the hook by which you can manipulate the QGIS
             application at run time.
-        :type iface: QgisInterface
+        :type iface: Qgisinterface
         """
         # Save reference to the QGIS interface
         self.iface = iface
@@ -85,15 +87,25 @@ class smmt_plugin:
         #BOTÕES
         self.dlg.bproxima = QPushButton("PROXIMA", self.dlg)
         self.dlg.banterior = QPushButton("ANTERIOR", self.dlg)
-        self.dlg.bpoe = QPushButton("POE", self.dlg)
+        self.dlg.bpoe = QPushButton("POE_e", self.dlg)
+        self.dlg.bpod = QPushButton("POE_d", self.dlg)
+        self.dlg.calcula = QPushButton("Calcular", self.dlg)
+        #self.dlg.coleta = QPushButton("COLETAR", self.dlg)
 
         self.dlg.bproxima.clicked.connect(self.passar_foto)
         self.dlg.banterior.clicked.connect(self.voltar_foto)
-        self.dlg.bpoe.clicked.connect(self.ler_arquivo_texto)
+        self.dlg.bpoe.clicked.connect(self.ler_arquivo_texto_e)
+        self.dlg.bpod.clicked.connect(self.ler_arquivo_texto_d)
+        self.dlg.calcula.clicked.connect(self.stereotriangulation)
+        #self.dlg.calcula.clicked.connect(self.coletar)
 
+        self.dlg.bpod.move(0,30)
+        self.dlg.calcula.move(0,60)
 
         self.dlg.bproxima.setEnabled(False)
         self.dlg.banterior.setEnabled(False)
+        self.dlg.calcula.setEnabled(False)
+        #self.dlg.coleta.setEnabled(False)
 
         #Botões Direita
         bzoomin_d = QPushButton("+", self.dlg)
@@ -170,6 +182,7 @@ class smmt_plugin:
         VBlayout_e2 = QVBoxLayout()
         VBlayout_e2.addWidget(self.dlg.bproxima)
         VBlayout_e2.addWidget(self.dlg.banterior)
+        #VBlayout_e2.addWidget(self.dlg.coleta)
         HBlayout_e3 = QHBoxLayout()
         HBlayout_e3.setAlignment(Qt.AlignLeft)
         HBlayout_e3.addWidget(bzoomin_e)
@@ -192,15 +205,50 @@ class smmt_plugin:
         HBlayout_e.addLayout(VBlayout_d1)
 
 
-
-
         #Algumas consideraçãoes iniciais
         self.dlg.pixmap_left = 0
-        self.dlg.pixmap_eight = 0
+        self.dlg.pixmap_right = 0
 
         self.filename_right_dir = 0
         self.filename_left_dir = 0
 
+        self.dlg.pxd = 0
+        self.dlg.pyd = 0
+        self.dlg.pxe = 0
+        self.dlg.pye = 0
+
+        #Distancias focais (df), em pixels
+        self.dlg.dfe = 4500.42533601715
+        self.dlg.dfe = float(self.dlg.dfe)
+        self.dlg.dfd = 4503.47009360159
+        self.dlg.dfd = float(self.dlg.dfd)
+
+        #Ponto pronipal, em pixels
+        self.dlg.ppxe = 74.2790697674418
+        self.dlg.ppxe = float(self.dlg.ppxe)
+        self.dlg.ppye = -139.644186046512
+        self.dlg.ppye = float(self.dlg.ppye)
+
+        self.dlg.ppxd = 85.8604651162789
+        self.dlg.ppxd = float(self.dlg.ppxd)
+        self.dlg.ppyd = -174.53023255814
+        self.dlg.ppyd = float(self.dlg.ppyd)
+
+        #Distancia focal após estereoretificaçãoptimize (em pixels)
+        self.dlg.dfest = 4146.7871579187267
+
+        #Tamanho do pixel em metros
+        self.dlg.tamanhop = 0.0000043
+
+        #Base entre câmeras em pixels
+        self.dlg.base = 0.67032028/self.dlg.tamanhop
+
+        #Parâmetros WGS84, em metros
+        self.dlg.a = 6378137
+        self.dlg.b = 6356752.3142
+        self.dlg.f = 1/298.257223563
+
+        self.dlg.e2 = 1-(pow(self.dlg.b,2)/pow(self.dlg.a,2))
 #================================================================
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -214,11 +262,7 @@ class smmt_plugin:
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('smmt_plugin', message)
 #===============================================================
-    #def set_geometry(self,setGeometry):
-    #    self.dlg.label_im_d.setGeometry(50,50,500,500)
 
-
-#==============================================================
     def add_action(
         self,
         icon_path,
@@ -354,7 +398,6 @@ class smmt_plugin:
             self.dlg.visu_e.setDragMode(QGraphicsView.ScrollHandDrag)
             self.dlg._photo_e.mouseDoubleClickEvent = self.pixelSelect_e
             self.dlg.editPixInfo_e.clear()
-
         else:
             self.dlg._empty_e = True
             self.dlg.visu_e.setDragMode(QGraphicsView.NoDrag)
@@ -369,7 +412,6 @@ class smmt_plugin:
             self.dlg.visu_d.setDragMode(QGraphicsView.ScrollHandDrag)
             self.dlg._photo_d.mouseDoubleClickEvent = self.pixelSelect_d
             self.dlg.editPixInfo_d.clear()
-
         else:
             self.dlg._empty_d = True
             self.dlg.visu_d.setDragMode(QGraphicsView.NoDrag)
@@ -379,14 +421,7 @@ class smmt_plugin:
     def selecionar_fotos_direita(self):
         self.index=0
         self.dlg.lineEdit_d.clear()
-        #filename_right = QFileDialog.getOpenFileNames(self.dlg, "Selecionar imagens câmera direita","/", '*.jpg, *.png')
         self.filename_right_dir =  QFileDialog.getExistingDirectory(self.dlg,"Selecionar pasta com imagens camera da direita","/")
-
-
-        #filename_right = QFileDialog.getOpenFileName(self.dlg,"cuzao","/home/lucas/Imagens")
-        #self.dlg.lineEdit_d.setText(filename_right_dir)
-        #img = QImage(filename_right)
-        #self.dlg.label_im_d.resize(600,600)
 
         if self.filename_right_dir != '':
             self.files_right = sorted(os.listdir(self.filename_right_dir))
@@ -457,24 +492,57 @@ class smmt_plugin:
             self.fitInView_d(self)
             self.dlg.editPixInfo_d.clear()
 
+    #def coletar(self):
+        #self.dlg._photo_d.mousePressEvent = self.pixelSelect_d
+        #self.dlg._photo_e.mousePressEvent = self.pixelSelect_e
+
+    def handdrag_d(self):
+        if self.dlg.visu_d.setDragMode(QGraphicsView.ScrollHandDrag):
+            self.dlg.visu_d.setDragMode(QGraphicsView.NoDrag)
+        else:
+            self.dlg.visu_d.setDragMode(QGraphicsView.ScrollHandDrag)
+
+    def handdrag_e(self):
+        if self.dlg.visu_e.setDragMode(QGraphicsView.ScrollHandDrag):
+            self.dlg.visu_e.setDragMode(QGraphicsView.NoDrag)
+        else:
+            self.dlg.visu_e.setDragMode(QGraphicsView.ScrollHandDrag)
+
     def pixelSelect_d(self,event):
         position_d = QPoint( event.pos().x(),  event.pos().y())
         self.dlg.editPixInfo_d.setText('%d, %d' % (event.pos().x(), event.pos().y()))
+
+        self.dlg.pxd = event.pos().x()
+        self.dlg.pyd = event.pos().y()
+
+        self.habilitarbotao()
+        #self.handdrag_d()
 
     def pixelSelect_e(self,event):
         position_e = QPoint( event.pos().x(),  event.pos().y())
         self.dlg.editPixInfo_e.setText('%d, %d' % (event.pos().x(), event.pos().y()))
 
+        self.dlg.pxe = event.pos().x()
+        self.dlg.pye = event.pos().y()
+
+        self.habilitarbotao()
+        #self.handdrag_e()
+        #self.ajustamento_e()
+
     def habilitarbotao(self):
         if self.dlg.pixmap_left == 0 or self.dlg.pixmap_right == 0:
             self.dlg.bproxima.setEnabled(False)
             self.dlg.banterior.setEnabled(False)
-
         else:
             self.dlg.bproxima.setEnabled(True)
             self.dlg.banterior.setEnabled(True)
 
-    def ler_arquivo_texto(self):
+        if self.dlg.pxe == 0 or self.dlg.pxd == 0:
+            self.dlg.calcula.setEnabled(False)
+        else:
+            self.dlg.calcula.setEnabled(True)
+
+    def ler_arquivo_texto_e(self):
         name = QFileDialog.getOpenFileName(self.dlg,"Selecionar os parametros de orietacao exterior","/")
 
         texto = []
@@ -484,17 +552,195 @@ class smmt_plugin:
 
         rowCount = len(texto)
         colCount = max([len(p) for p in texto])
+        self.dlg.tableWidget_e = QTableWidget()
+        self.dlg.tableWidget_e.setRowCount(rowCount)
+        self.dlg.tableWidget_e.setColumnCount(colCount)
 
-        self.dlg.tableWidget.setRowCount(rowCount)
-        self.dlg.tableWidget.setColumnCount(colCount)
-
-        self.dlg.tableWidget.setHorizontalHeaderLabels(('ID_Foto','Longitude','Latitude','Altitude','X0','Y0','Z0','omega','phy','kappa','bla1','bla2','bla3'))
+        #Caso eu queira mostrar a tabela e arrumar o header
+        #self.dlg.tableWidget_e.setHorizontalHeaderLabels(('ID_Foto','Longitude','Latitude','Altitude','X0','Y0','Z0','omega','phy','kappa','bla1','bla2','bla3'))
 
         for row, foto in enumerate(texto):
             for column, value in enumerate(foto):
                 newItem = QTableWidgetItem(value)
                 newItem.setFlags(Qt.ItemIsEnabled)
-                self.dlg.tableWidget.setItem(row, column, newItem)
+                self.dlg.tableWidget_e.setItem(row, column, newItem)
+
+        luli2 = self.dlg.tableWidget_e.item(0,1).text()
+        #luli = np.array2string(pontosrefcartesiana, precision=6, separator=',',suppress_small=True)
+        self.dlg.plainTextEdit.setPlainText(luli2)
+
+    def ler_arquivo_texto_d(self):
+        name = QFileDialog.getOpenFileName(self.dlg,"Selecionar os parametros de orietacao exterior","/")
+
+        texto = []
+        reader = csv.reader(open(name), delimiter = ',')
+        for row in reader:
+            texto.append(row)
+
+        rowCount = len(texto)
+        colCount = max([len(p) for p in texto])
+        self.dlg.tableWidget_d = QTableWidget()
+        self.dlg.tableWidget_d.setRowCount(rowCount)
+        self.dlg.tableWidget_d.setColumnCount(colCount)
+
+        #Caso eu queira mostrar a tabela e arrumar o header
+        #self.dlg.tableWidget_e.setHorizontalHeaderLabels(('ID_Foto','Longitude','Latitude','Altitude','X0','Y0','Z0','omega','phy','kappa','bla1','bla2','bla3'))
+
+        for row, foto in enumerate(texto):
+            for column, value in enumerate(foto):
+                newItem = QTableWidgetItem(value)
+                newItem.setFlags(Qt.ItemIsEnabled)
+                self.dlg.tableWidget_d.setItem(row, column, newItem)
+
+    def ajustamento_e(self):
+        row = self.index
+
+        #Vetor Solução inicial
+        si = np.array([0,0,0])
+
+        #POE camera esquerda
+        X0e = self.dlg.tableWidget_e.item(row,1).text()
+        X0e = float(X0e)
+        Y0e = self.dlg.tableWidget_e.item(row,2).text()
+        Y0e = float(Y0e)
+        Z0e = self.dlg.tableWidget_e.item(row,3).text()
+        Z0e = float(Z0e)
+        m11e = self.dlg.tableWidget_e.item(row,4).text()
+        m11e = float(m11e)
+        m12e = self.dlg.tableWidget_e.item(row,5).text()
+        m12e = float(m12e)
+        m13e = self.dlg.tableWidget_e.item(row,6).text()
+        m13e = float(m13e)
+        m21e = self.dlg.tableWidget_e.item(row,7).text()
+        m21e = float(m21e)
+        m22e = self.dlg.tableWidget_e.item(row,8).text()
+        m22e = float(m22e)
+        m23e = self.dlg.tableWidget_e.item(row,9).text()
+        m23e = float(m23e)
+        m31e = self.dlg.tableWidget_e.item(row,10).text()
+        m31e = float(m31e)
+        m32e = self.dlg.tableWidget_e.item(row,11).text()
+        m32e = float(m32e)
+        m33e = self.dlg.tableWidget_e.item(row,12).text()
+        m33e = float(m33e)
+
+        #POE camera direita
+        X0d = self.dlg.tableWidget_d.item(row,1).text()
+        X0d = float(X0d)
+        Y0d = self.dlg.tableWidget_d.item(row,2).text()
+        Y0d = float(Y0d)
+        Z0d = self.dlg.tableWidget_d.item(row,3).text()
+        Z0d = float(Z0d)
+        m11d = self.dlg.tableWidget_d.item(row,4).text()
+        m11d= float(m11d)
+        m12d = self.dlg.tableWidget_d.item(row,5).text()
+        m12d= float(m12d)
+        m13d = self.dlg.tableWidget_d.item(row,6).text()
+        m13d= float(m13d)
+        m21d = self.dlg.tableWidget_d.item(row,7).text()
+        m21d= float(m21d)
+        m22d = self.dlg.tableWidget_d.item(row,8).text()
+        m22d= float(m22d)
+        m23d = self.dlg.tableWidget_d.item(row,9).text()
+        m23d= float(m23d)
+        m31d = self.dlg.tableWidget_d.item(row,10).text()
+        m31d= float(m31d)
+        m32d = self.dlg.tableWidget_d.item(row,11).text()
+        m32d= float(m32d)
+        m33d = self.dlg.tableWidget_d.item(row,12).text()
+        m33d= float(m33d)
+
+        #Valores auxiliares para matriz das derivadas
+
+        Nxe = m11e*(si[0]-X0e) + m12e*(si[1]-Y0e) + m13e*(si[2]-Z0e)
+        Nye = m21e*(si[0]-X0e) + m22e*(si[1]-Y0e) + m23e*(si[2]-Z0e)
+        De = m31e*(si[0]-X0e) + m32e*(si[1]-Y0e) + m33e*(si[2]-Z0e)
+
+        Nxd = m11d*(si[0]-X0d) + m12d*(si[1]-Y0d) + m13d*(si[2]-Z0d)
+        Nyd = m21d*(si[0]-X0d) + m22d*(si[1]-Y0d) + m23d*(si[2]-Z0d)
+        Dd = m31d*(si[0]-X0d) + m32d*(si[1]-Y0d) + m33d*(si[2]-Z0d)
+
+        #Matriz derivadas parciais (A)
+        A = np.array([[-self.dlg.dfe*((m11e*De-m31e*Nxe)/(pow(De,2))), -self.dlg.dfe*((m12e*De-m32e*Nxe)/(pow(De,2))), -self.dlg.dfe*((m13e*De-m33e*Nxe)/(pow(De,2)))], [-self.dlg.dfe*((m21e*De-m31e*Nye)/(pow(De,2))), -self.dlg.dfe*((m22e*De-m32e*Nye)/(pow(De,2))), -self.dlg.dfe*((m23e*De-m33e*Nye)/(pow(De,2)))], [-self.dlg.dfd*((m11d*Dd-m31d*Nxd)/(pow(Dd,2))), -self.dlg.dfd*((m12d*Dd-m32d*Nxd)/(pow(Dd,2))), -self.dlg.dfd*((m13d*Dd-m33d*Nxd)/(pow(Dd,2)))], [-self.dlg.dfd*((m21d*Dd-m31d*Nyd)/(pow(Dd,2))), -self.dlg.dfd*((m22d*Dd-m32d*Nyd)/(pow(Dd,2))), -self.dlg.dfd*((m23d*Dd-m33d*Nyd)/(pow(Dd,2)))]])
+
+        #Matriz Peso
+        P = np.array([[math.sqrt((pow(self.dlg.pxe-self.dlg.ppxe,2))+(pow(self.dlg.pye-self.dlg.ppye,2))), 0, 0, 0], [0, math.sqrt((pow(self.dlg.pxe-self.dlg.ppxe,2))+(pow(self.dlg.pye-self.dlg.ppye,2))), 0, 0], [0, 0, math.sqrt((pow(self.dlg.pxd-self.dlg.ppxd,2))+(pow(self.dlg.pyd-self.dlg.ppyd,2))), 0], [0, 0, 0, math.sqrt((pow(self.dlg.pxd-self.dlg.ppxd,2))+(pow(self.dlg.pyd-self.dlg.ppyd,2)))]])
+
+        P1 = np.array([[10,0,0,0],[0,10,0,0],[0,0,10,0],[0,0,0,10]])
+
+        L0 = np.array([[-self.dlg.dfe*(Nxe/De)+self.dlg.ppxe], [-self.dlg.dfe*(Nye/De)+self.dlg.ppye], [-self.dlg.dfd*(Nxd/Dd)+self.dlg.ppxd], [-self.dlg.dfd*(Nyd/Dd)+self.dlg.ppyd]])
+
+        Lb = np.array([[self.dlg.pxe],[self.dlg.pye],[self.dlg.pxd],[self.dlg.pyd]])
+
+        L = np.subtract(L0,Lb)
+        #self.dlg.plainTextEdit.setPlainText(A.shape)
+
+        X = np.matmul(-(pow((np.matmul(np.matmul(A.transpose(),P),A)),-1)),(np.matmul(np.matmul(A.transpose(),P),L)))
+
+        Nxea = m11e*(X[0]-X0e) + m12e*(X[1]-Y0e) + m13e*(X[2]-Z0e)
+        Nyea = m21e*(X[0]-X0e) + m22e*(X[1]-Y0e) + m23e*(X[2]-Z0e)
+        Dea = m31e*(X[0]-X0e) + m32e*(X[1]-Y0e) + m33e*(X[2]-Z0e)
+
+        Nxda = m11d*(X[0]-X0d) + m12d*(X[1]-Y0d) + m13d*(X[2]-Z0d)
+        Nyda = m21d*(X[0]-X0d) + m22d*(X[1]-Y0d) + m23d*(X[2]-Z0d)
+        Dda = m31d*(X[0]-X0d) + m32d*(X[1]-Y0d) + m33d*(X[2]-Z0d)
+
+        La = np.array([[-self.dlg.dfe*(Nxea/Dea)+self.dlg.ppxe], [-self.dlg.dfe*(Nyea/Dea)+self.dlg.ppye], [-self.dlg.dfd*(Nxda/Dda)+self.dlg.ppxd], [-self.dlg.dfd*(Nyda/Dda)+self.dlg.ppyd]])
+
+        V = np.subtract(La,Lb)
+
+        varpost = np.matmul(np.matmul(V.transpose(),P1),V)
+
+        luli = np.array2string(X, precision=2, separator=',',suppress_small=True)
+        self.dlg.plainTextEdit.setPlainText(luli)
+
+    def stereotriangulation(self):
+        row = self.index
+
+        long = self.dlg.tableWidget_e.item(row,1).text()
+        long = float(long)
+        lat = self.dlg.tableWidget_e.item(row,2).text()
+        lat = float(lat)
+        alt = self.dlg.tableWidget_e.item(row,3).text()
+        alt = float(alt)
+
+        z = (self.dlg.dfest * self.dlg.base)/(self.dlg.pxe - self.dlg.pxd)
+        #z em metros
+        zm = z * self.dlg.tamanhop
+
+        x = self.dlg.pxe * (z/self.dlg.dfest)
+        #x em m
+        xm = x * self.dlg.tamanhop
+
+        y = self.dlg.pye * (z/self.dlg.dfest)
+        #y em m
+        ym = y * self.dlg.tamanhop
+
+        coordpontosimagem = np.array([[xm],[ym],[zm]])
+
+        matrizrotbase = np.array([[float(self.dlg.tableWidget_e.item(row,4).text()),float(self.dlg.tableWidget_e.item(row,5).text()),float(self.dlg.tableWidget_e.item(row,6).text())],[float(self.dlg.tableWidget_e.item(row,7).text()),float(self.dlg.tableWidget_e.item(row,8).text()),float(self.dlg.tableWidget_e.item(row,9).text())],[float(self.dlg.tableWidget_e.item(row,10).text()),float(self.dlg.tableWidget_e.item(row,11).text()),float(self.dlg.tableWidget_e.item(row,12).text())]])
+
+        pontosrefcam = np.matmul(matrizrotbase,coordpontosimagem)
+
+        matrizrotlatlong = np.array([[-math.sin(math.radians(lat)),-math.sin(math.radians(long))*math.cos(math.radians(lat)),math.cos(math.radians(long))*math.cos(math.radians(lat))],[math.cos(math.radians(lat)),-math.sin(math.radians(long))*math.sin(math.radians(lat)),math.cos(math.radians(long))*math.sin(math.radians(lat))],[0,math.cos(math.radians(long)),math.sin(math.radians(long))]])
+
+        N = self.dlg.a/math.sqrt(1-self.dlg.e2*pow(math.sin(math.radians(long)),2))
+
+
+        X = (N+alt)*math.cos(math.radians(long))*math.cos(math.radians(lat))
+        Y = (N+alt)*math.cos(math.radians(long))*math.sin(math.radians(lat))
+        Z = ((pow(self.dlg.b,2)/pow(self.dlg.a,2))*N+alt)*math.sin(math.radians(long))
+
+        colunacoordcartesianas = np.array([[X],[Y],[Z]])
+
+        pontosrefcartesiana = np.matmul(matrizrotlatlong,pontosrefcam)+colunacoordcartesianas
+
+        luli = np.array2string(pontosrefcartesiana, precision=10, separator=',',suppress_small=True)
+        self.dlg.plainTextEdit.setPlainText(luli)
+        #self.dlg.plainTextEdit.setPlainText(str(lat))
+
+
+
 
     #descobrir uma maneira de resetar tudo quando fechado
     def reset(self):
