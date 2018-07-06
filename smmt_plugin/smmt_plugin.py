@@ -21,18 +21,18 @@
 """
 from qgis.core import *
 from qgis.gui import *
-from PyQt4.QtCore import *#QSettings, QTranslator, qVersion, QCoreApplication
-from PyQt4.QtGui import * #QAction, QIcon, QFileDialog, QDialog
-# Initialize Qt resources from file resources.py
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
 import resources
 import glob
-# Import the code for the dialog
 from smmt_plugin_dialog import smmt_pluginDialog
 import os.path
 import csv
 import numpy as np
 import math
-
+import pyproj
+import processing
+import qgis.utils
 
 class smmt_plugin:
 
@@ -62,50 +62,71 @@ class smmt_plugin:
 
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
-#==========================================================================
+
         # Create the dialog (after translation) and keep reference
         self.dlg = smmt_pluginDialog()
-#=======================================================================
+
+
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&SMMT Features Collector')
         # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'smmt_plugin')
         self.toolbar.setObjectName(u'smmt_plugin')
-#===============================================================
+
+
+        #Limpar os campos
         self.dlg.lineEdit_e.clear()
         self.dlg.lineEdit_d.clear()
+        self.dlg.lineEdit.clear()
 
-        #self.dlg.tableWidget.horizontalHeaderItem().setTextAlignment(Qt.AlignHCenter)
-        #self.dlg.tableWidget.setReadOnly(True)
 
+        #Conecta com as funções
         self.dlg.pushButton_d.clicked.connect(self.selecionar_fotos_direita)
         self.dlg.pushButton_e.clicked.connect(self.selecionar_fotos_esquerda)
 
-        self.dlg.resize(1000,650)
+
+        #Tamanho da tela do plugin
+        self.dlg.resize(960,760)
+
 
         #BOTÕES
         self.dlg.bproxima = QPushButton("PROXIMA", self.dlg)
         self.dlg.banterior = QPushButton("ANTERIOR", self.dlg)
-        self.dlg.bpoe = QPushButton("POE_e", self.dlg)
-        self.dlg.bpod = QPushButton("POE_d", self.dlg)
+        self.dlg.bpoe = QPushButton("...", self.dlg)
+        #self.dlg.bpod = QPushButton("POE_d", self.dlg)
         self.dlg.calcula = QPushButton("Calcular", self.dlg)
+        self.dlg.representa = QPushButton("Adicionar", self.dlg)
         #self.dlg.coleta = QPushButton("COLETAR", self.dlg)
 
+
+        #Conectar Botões às funções
         self.dlg.bproxima.clicked.connect(self.passar_foto)
         self.dlg.banterior.clicked.connect(self.voltar_foto)
         self.dlg.bpoe.clicked.connect(self.ler_arquivo_texto_e)
-        self.dlg.bpod.clicked.connect(self.ler_arquivo_texto_d)
+        #self.dlg.bpod.clicked.connect(self.ler_arquivo_texto_d)
         self.dlg.calcula.clicked.connect(self.stereotriangulation)
+        self.dlg.representa.clicked.connect(self.camada)
         #self.dlg.calcula.clicked.connect(self.coletar)
 
-        self.dlg.bpod.move(0,30)
-        self.dlg.calcula.move(0,60)
 
+        #Movendo e alterando tamanho de alguns botões
+        #self.dlg.bpod.move(0,0)
+        self.dlg.bpoe.move(541,47)
+
+        self.dlg.calcula.move(120,580)
+        self.dlg.calcula.resize(165,30)
+
+        self.dlg.representa.move(410,700)
+        self.dlg.representa.resize(135,30)
+
+        #Setando alguns botões como "inclicaveis" inicialmente
         self.dlg.bproxima.setEnabled(False)
         self.dlg.banterior.setEnabled(False)
         self.dlg.calcula.setEnabled(False)
+        self.dlg.representa.setEnabled(False)
         #self.dlg.coleta.setEnabled(False)
+
 
         #Botões Direita
         bzoomin_d = QPushButton("+", self.dlg)
@@ -115,6 +136,7 @@ class smmt_plugin:
         bzoomin_d.clicked.connect(self.zoomin_d)
         bzoomout_d.clicked.connect(self.zoomout_d)
         bfitinview_d.clicked.connect(self.fitInView_d)
+
 
         #Botões Esquerda
         bzoomin_e = QPushButton("+", self.dlg)
@@ -169,12 +191,14 @@ class smmt_plugin:
         self.dlg.editPixInfo_d = QLineEdit(self.dlg)
         self.dlg.editPixInfo_e = QLineEdit(self.dlg)
 
+        #Setando alguns campos como "apenas leitura"
         self.dlg.editPixInfo_d.setReadOnly(True)
         self.dlg.editPixInfo_e.setReadOnly(True)
+        self.dlg.plainTextEdit.setReadOnly(True)
 
         #Agrupando objetos em um mesmo layout (direita e esqueda)
         vertical_e = QWidget(self.dlg)
-        vertical_e.setGeometry(QRect(30,150,900,450))
+        vertical_e.setGeometry(QRect(30,90,900,450))
         vertical_e.setObjectName("Camera esquerda")
         HBlayout_e = QHBoxLayout(vertical_e)
         VBlayout_e1 = QVBoxLayout()
@@ -217,22 +241,7 @@ class smmt_plugin:
         self.dlg.pxe = 0
         self.dlg.pye = 0
 
-        #Distancias focais (df), em pixels
-        self.dlg.dfe = 4500.42533601715
-        self.dlg.dfe = float(self.dlg.dfe)
-        self.dlg.dfd = 4503.47009360159
-        self.dlg.dfd = float(self.dlg.dfd)
-
-        #Ponto pronipal, em pixels
-        self.dlg.ppxe = 74.2790697674418
-        self.dlg.ppxe = float(self.dlg.ppxe)
-        self.dlg.ppye = -139.644186046512
-        self.dlg.ppye = float(self.dlg.ppye)
-
-        self.dlg.ppxd = 85.8604651162789
-        self.dlg.ppxd = float(self.dlg.ppxd)
-        self.dlg.ppyd = -174.53023255814
-        self.dlg.ppyd = float(self.dlg.ppyd)
+        self.dlg.vl = 0
 
         #Distancia focal após estereoretificaçãoptimize (em pixels)
         self.dlg.dfest = 4146.7871579187267
@@ -247,9 +256,8 @@ class smmt_plugin:
         self.dlg.a = 6378137
         self.dlg.b = 6356752.3142
         self.dlg.f = 1/298.257223563
-
         self.dlg.e2 = 1-(pow(self.dlg.b,2)/pow(self.dlg.a,2))
-#================================================================
+
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -261,7 +269,6 @@ class smmt_plugin:
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('smmt_plugin', message)
-#===============================================================
 
     def add_action(
         self,
@@ -345,7 +352,8 @@ class smmt_plugin:
             self.iface.removeToolBarIcon(action)
         # remove the toolbar
         del self.toolbar
-#====================================================================
+
+    #A partir daqui todas as funções desenvolvidas para o funcionamento do plugin
     def hasPhoto_d(self):
         return not self.dlg._empty_d
 
@@ -379,10 +387,10 @@ class smmt_plugin:
             self.dlg._zoom_e = 0
 
     def zoomin_d(self):
-        self.dlg.visu_d.scale(1.2,1.2)
+        self.dlg.visu_d.scale(1.5,1.5)
 
     def zoomin_e(self):
-        self.dlg.visu_e.scale(1.2,1.2)
+        self.dlg.visu_e.scale(1.5,1.5)
 
     def zoomout_d(self):
         self.dlg.visu_d.scale(0.8,0.8)
@@ -542,6 +550,11 @@ class smmt_plugin:
         else:
             self.dlg.calcula.setEnabled(True)
 
+        if self.dlg.lineEditFeicao == '' or self.dlg.lineEditDescricao == '' or self.dlg.plainTextEdit == '':
+            self.dlg.representa.setEnabled(False)
+        else:
+            self.dlg.representa.setEnabled(True)
+
     def ler_arquivo_texto_e(self):
         name = QFileDialog.getOpenFileName(self.dlg,"Selecionar os parametros de orietacao exterior","/")
 
@@ -556,8 +569,6 @@ class smmt_plugin:
         self.dlg.tableWidget_e.setRowCount(rowCount)
         self.dlg.tableWidget_e.setColumnCount(colCount)
 
-        #Caso eu queira mostrar a tabela e arrumar o header
-        #self.dlg.tableWidget_e.setHorizontalHeaderLabels(('ID_Foto','Longitude','Latitude','Altitude','X0','Y0','Z0','omega','phy','kappa','bla1','bla2','bla3'))
 
         for row, foto in enumerate(texto):
             for column, value in enumerate(foto):
@@ -565,11 +576,10 @@ class smmt_plugin:
                 newItem.setFlags(Qt.ItemIsEnabled)
                 self.dlg.tableWidget_e.setItem(row, column, newItem)
 
-        luli2 = self.dlg.tableWidget_e.item(0,1).text()
-        #luli = np.array2string(pontosrefcartesiana, precision=6, separator=',',suppress_small=True)
-        self.dlg.plainTextEdit.setPlainText(luli2)
+        self.dlg.lineEdit.setText(name)
 
     def ler_arquivo_texto_d(self):
+        #Atualmente não está sendo usado mas poderá ser usado no futuro
         name = QFileDialog.getOpenFileName(self.dlg,"Selecionar os parametros de orietacao exterior","/")
 
         texto = []
@@ -583,9 +593,6 @@ class smmt_plugin:
         self.dlg.tableWidget_d.setRowCount(rowCount)
         self.dlg.tableWidget_d.setColumnCount(colCount)
 
-        #Caso eu queira mostrar a tabela e arrumar o header
-        #self.dlg.tableWidget_e.setHorizontalHeaderLabels(('ID_Foto','Longitude','Latitude','Altitude','X0','Y0','Z0','omega','phy','kappa','bla1','bla2','bla3'))
-
         for row, foto in enumerate(texto):
             for column, value in enumerate(foto):
                 newItem = QTableWidgetItem(value)
@@ -593,6 +600,7 @@ class smmt_plugin:
                 self.dlg.tableWidget_d.setItem(row, column, newItem)
 
     def ajustamento_e(self):
+        #Não usado no momento, mas poderá ser aproveitado no futuro
         row = self.index
 
         #Vetor Solução inicial
@@ -722,25 +730,97 @@ class smmt_plugin:
 
         pontosrefcam = np.matmul(matrizrotbase,coordpontosimagem)
 
-        matrizrotlatlong = np.array([[-math.sin(math.radians(lat)),-math.sin(math.radians(long))*math.cos(math.radians(lat)),math.cos(math.radians(long))*math.cos(math.radians(lat))],[math.cos(math.radians(lat)),-math.sin(math.radians(long))*math.sin(math.radians(lat)),math.cos(math.radians(long))*math.sin(math.radians(lat))],[0,math.cos(math.radians(long)),math.sin(math.radians(long))]])
+        matrizrotlatlong = np.array([[-math.sin(math.radians(lat)), -math.sin(math.radians(long))*math.cos(math.radians(lat)), math.cos(math.radians(long))*math.cos(math.radians(lat))], [math.cos(math.radians(lat)), -math.sin(math.radians(long))*math.sin(math.radians(lat)), math.cos(math.radians(long))*math.sin(math.radians(lat))], [0, math.cos(math.radians(long)), math.sin(math.radians(long))]])
 
-        N = self.dlg.a/math.sqrt(1-self.dlg.e2*pow(math.sin(math.radians(long)),2))
+        wgs84 = pyproj.Proj('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
+        geocentric = pyproj.Proj('+proj=geocent +datum=WGS84 +units=m +no_defs')
+
+        lu1,lu2,lu3 = pyproj.transform(wgs84,geocentric,long,lat,alt)
+
+        coordlulicoluna = np.array([[lu1],[lu2],[lu3]])
+
+        pontosrefcartesiana = np.matmul(matrizrotlatlong,pontosrefcam)+coordlulicoluna
+
+        #Transformação das coordenadas cartesianas para as gedésicas
+        pontosrefcartesiana1 = pontosrefcartesiana[0]
+        pontosrefcartesiana2 = pontosrefcartesiana[1]
+        pontosrefcartesiana3 = pontosrefcartesiana[2]
+        self.dlg.coordenadas = pyproj.transform(geocentric,wgs84,pontosrefcartesiana1,pontosrefcartesiana2,pontosrefcartesiana3)
 
 
-        X = (N+alt)*math.cos(math.radians(long))*math.cos(math.radians(lat))
-        Y = (N+alt)*math.cos(math.radians(long))*math.sin(math.radians(lat))
-        Z = ((pow(self.dlg.b,2)/pow(self.dlg.a,2))*N+alt)*math.sin(math.radians(long))
+        #luli = np.array2string(coordenadas, precision=10, separator=',',suppress_small=True)
+        self.dlg.plainTextEdit.setPlainText('')
+        self.dlg.plainTextEdit.setPlainText(' Latidude: '+str(self.dlg.coordenadas[1])+'\n Longitude: '+str(self.dlg.coordenadas[0])+'\n Altitude: '+str(self.dlg.coordenadas[2]))
 
-        colunacoordcartesianas = np.array([[X],[Y],[Z]])
+        self.habilitarbotao()
 
-        pontosrefcartesiana = np.matmul(matrizrotlatlong,pontosrefcam)+colunacoordcartesianas
+    def camada(self):
+        # create layer
+        if self.dlg.vl == 0:
+            self.dlg.vl = QgsVectorLayer("Point", "Feicoes Temporário", "memory")
+            self.dlg.pr = self.dlg.vl.dataProvider()
 
-        luli = np.array2string(pontosrefcartesiana, precision=10, separator=',',suppress_small=True)
-        self.dlg.plainTextEdit.setPlainText(luli)
-        #self.dlg.plainTextEdit.setPlainText(str(lat))
+            # changes are only possible when editing the layer
+            self.dlg.vl.startEditing()
+            # add fields
+            self.dlg.pr.addAttributes([QgsField("Feicao", QVariant.String),QgsField("Descricacao da feicao", QVariant.String)])
 
+            # add layer to the legend
+            QgsMapLayerRegistry.instance().addMapLayer(self.dlg.vl)
 
+            # add a feature
+            fet = QgsFeature()
+            fet.setGeometry(QgsGeometry.fromPoint(QgsPoint(self.dlg.coordenadas[0],self.dlg.coordenadas[1])))
 
+            self.dlg.lineEditFeicao.setText('')
+            self.dlg.lineEditDescricao.setText('')
+            feicao = self.dlg.lineEditFeicao.text()
+            descricao = self.dlg.lineEditDescricao.text()
+
+            self.dlg.lineEditFeicao.clear()
+            self.dlg.lineEditDescricao.clear()
+            self.dlg.plainTextEdit.clear()
+            self.dlg.editPixInfo_d.clear()
+            self.dlg.editPixInfo_e.clear()
+
+            fet.setAttributes([feicao, descricao])
+            self.dlg.pr.addFeatures([fet])
+
+            # commit to stop editing the layer
+            self.dlg.vl.commitChanges()
+
+            # update layer's extent when new features have been added
+            # because change of extent in provider is not propagated to the layer
+            self.dlg.vl.updateExtents()
+
+            self.habilitarbotao()
+        else:
+            self.dlg.vl.startEditing()
+
+            # add a feature
+            fet2 = QgsFeature()
+            fet2.setGeometry(QgsGeometry.fromPoint(QgsPoint(self.dlg.coordenadas[0],self.dlg.coordenadas[1])))
+
+            feicao = self.dlg.lineEditFeicao.text()
+            descricao = self.dlg.lineEditDescricao.text()
+
+            self.dlg.lineEditFeicao.clear()
+            self.dlg.lineEditDescricao.clear()
+            self.dlg.plainTextEdit.clear()
+            self.dlg.editPixInfo_d.clear()
+            self.dlg.editPixInfo_e.clear()
+
+            fet2.setAttributes([feicao, descricao])
+            self.dlg.pr.addFeatures([fet2])
+
+            # commit to stop editing the layer
+            self.dlg.vl.commitChanges()
+
+            # update layer's extent when new features have been added
+            # because change of extent in provider is not propagated to the layer
+            self.dlg.vl.updateExtents()
+
+            self.habilitarbotao()
 
     #descobrir uma maneira de resetar tudo quando fechado
     def reset(self):
@@ -779,10 +859,6 @@ class smmt_plugin:
 
         self.dlg._empty_d = True
         self.dlg._empty_e = True
-
-
-
-#====================================================================================
 
     def run(self):
         """Run method that performs all the real work"""
